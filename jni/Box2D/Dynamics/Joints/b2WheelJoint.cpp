@@ -16,9 +16,9 @@
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "Box2D/Dynamics/Joints/b2WheelJoint.h"
-#include "Box2D/Dynamics/b2Body.h"
-#include "Box2D/Dynamics/b2TimeStep.h"
+#include <Box2D/Dynamics/Joints/b2WheelJoint.h>
+#include <Box2D/Dynamics/b2Body.h>
+#include <Box2D/Dynamics/b2TimeStep.h>
 
 // Linear constraint (point-to-line)
 // d = pB - pA = xB + rB - xA - rA
@@ -55,7 +55,7 @@ b2WheelJoint::b2WheelJoint(const b2WheelJointDef* def)
 
 	m_mass = 0.0f;
 	m_impulse = 0.0f;
-	m_motorMass = 0.0;
+	m_motorMass = 0.0f;
 	m_motorImpulse = 0.0f;
 	m_springMass = 0.0f;
 	m_springImpulse = 0.0f;

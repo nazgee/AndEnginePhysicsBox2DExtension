@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2006-2011 Erin Catto http://www.box2d.org
+* Copyright (c) 2014 Google, Inc.
 *
 * This software is provided 'as-is', without any express or implied
 * warranty.  In no event will the authors be held liable for any damages
@@ -16,17 +17,16 @@
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "Box2D/Dynamics/Contacts/b2ContactSolver.h"
+#include <Box2D/Dynamics/Contacts/b2ContactSolver.h>
 
-#include "Box2D/Dynamics/Contacts/b2Contact.h"
-#include "Box2D/Dynamics/b2Body.h"
-#include "Box2D/Dynamics/b2Fixture.h"
-#include "Box2D/Dynamics/b2World.h"
-#include "Box2D/Common/b2StackAllocator.h"
+#include <Box2D/Dynamics/Contacts/b2Contact.h>
+#include <Box2D/Dynamics/b2Body.h>
+#include <Box2D/Dynamics/b2Fixture.h>
+#include <Box2D/Dynamics/b2World.h>
+#include <Box2D/Common/b2StackAllocator.h>
 
 #define B2_DEBUG_SOLVER 0
 
-float b2_velocityThreshold = 1.0f;
 struct b2ContactPositionConstraint
 {
 	b2Vec2 localPoints[b2_maxManifoldPoints];
@@ -74,6 +74,7 @@ b2ContactSolver::b2ContactSolver(b2ContactSolverDef* def)
 		b2ContactVelocityConstraint* vc = m_velocityConstraints + i;
 		vc->friction = contact->m_friction;
 		vc->restitution = contact->m_restitution;
+		vc->tangentSpeed = contact->m_tangentSpeed;
 		vc->indexA = bodyA->m_islandIndex;
 		vc->indexB = bodyB->m_islandIndex;
 		vc->invMassA = bodyA->m_invMass;
@@ -321,7 +322,7 @@ void b2ContactSolver::SolveVelocityConstraints()
 			b2Vec2 dv = vB + b2Cross(wB, vcp->rB) - vA - b2Cross(wA, vcp->rA);
 
 			// Compute tangent force
-			float32 vt = b2Dot(dv, tangent);
+			float32 vt = b2Dot(dv, tangent) - vc->tangentSpeed;
 			float32 lambda = vcp->tangentMass * (-vt);
 
 			// b2Clamp the accumulated force
@@ -478,7 +479,6 @@ void b2ContactSolver::SolveVelocityConstraints()
 				//
 				x.x = - cp1->normalMass * b.x;
 				x.y = 0.0f;
-				vn1 = 0.0f;
 				vn2 = vc->K.ex.y * x.x + b.y;
 
 				if (x.x >= 0.0f && vn2 >= 0.0f)
@@ -521,7 +521,6 @@ void b2ContactSolver::SolveVelocityConstraints()
 				x.x = 0.0f;
 				x.y = - cp2->normalMass * b.y;
 				vn1 = vc->K.ey.x * x.y + b.x;
-				vn2 = 0.0f;
 
 				if (x.y >= 0.0f && vn1 >= 0.0f)
 				{
@@ -654,6 +653,15 @@ struct b2PositionSolverManifold
 				normal = -normal;
 			}
 			break;
+		default:
+			{
+				// This shouldn't be executed if pc->type is valid.
+				separation = 0.0f;
+				normal = b2Vec2_zero;
+				point = b2Vec2_zero;
+				b2Assert(false);
+			}
+			break;
 		}
 	}
 
@@ -764,8 +772,8 @@ bool b2ContactSolver::SolveTOIPositionConstraints(int32 toiIndexA, int32 toiInde
 			iA = pc->invIA;
 		}
 
-		float32 mB = pc->invMassB;
-		float32 iB = pc->invIB;
+		float32 mB = 0.0f;
+		float32 iB = 0.;
 		if (indexB == toiIndexA || indexB == toiIndexB)
 		{
 			mB = pc->invMassB;

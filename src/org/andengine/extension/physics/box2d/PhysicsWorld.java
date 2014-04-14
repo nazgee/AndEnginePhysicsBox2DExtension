@@ -67,9 +67,9 @@ public class PhysicsWorld implements IUpdateHandler {
 	// Getter & Setter
 	// ===========================================================
 
-	//	public World getWorld() {
-	//		return this.mWorld;
-	//	}
+	public World getWorld() {
+		return this.mWorld;
+	}
 
 	public int getPositionIterations() {
 		return this.mPositionIterations;

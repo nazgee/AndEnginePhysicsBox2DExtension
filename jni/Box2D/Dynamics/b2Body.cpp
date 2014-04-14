@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2006-2007 Erin Catto http://www.box2d.org
+* Copyright (c) 2013 Google, Inc.
 *
 * This software is provided 'as-is', without any express or implied
 * warranty.  In no event will the authors be held liable for any damages
@@ -16,11 +17,11 @@
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "Box2D/Dynamics/b2Body.h"
-#include "Box2D/Dynamics/b2Fixture.h"
-#include "Box2D/Dynamics/b2World.h"
-#include "Box2D/Dynamics/Contacts/b2Contact.h"
-#include "Box2D/Dynamics/Joints/b2Joint.h"
+#include <Box2D/Dynamics/b2Body.h>
+#include <Box2D/Dynamics/b2Fixture.h>
+#include <Box2D/Dynamics/b2World.h>
+#include <Box2D/Dynamics/Contacts/b2Contact.h>
+#include <Box2D/Dynamics/Joints/b2Joint.h>
 
 b2Body::b2Body(const b2BodyDef* bd, b2World* world)
 {
@@ -58,6 +59,7 @@ b2Body::b2Body(const b2BodyDef* bd, b2World* world)
 
 	m_xf.p = bd->position;
 	m_xf.q.Set(bd->angle);
+	m_xf0 = m_xf;
 
 	m_sweep.localCenter.SetZero();
 	m_sweep.c0 = m_xf.p;
@@ -141,10 +143,25 @@ void b2Body::SetType(b2BodyType type)
 	m_force.SetZero();
 	m_torque = 0.0f;
 
-	// Since the body type changed, we need to flag contacts for filtering.
+	// Delete the attached contacts.
+	b2ContactEdge* ce = m_contactList;
+	while (ce)
+	{
+		b2ContactEdge* ce0 = ce;
+		ce = ce->next;
+		m_world->m_contactManager.Destroy(ce0->contact);
+	}
+	m_contactList = NULL;
+
+	// Touch the proxies so that new contacts will be created (when appropriate)
+	b2BroadPhase* broadPhase = &m_world->m_contactManager.m_broadPhase;
 	for (b2Fixture* f = m_fixtureList; f; f = f->m_next)
 	{
-		f->Refilter();
+		int32 proxyCount = f->m_proxyCount;
+		for (int32 i = 0; i < proxyCount; ++i)
+		{
+			broadPhase->TouchProxy(f->m_proxies[i].proxyId);
+		}
 	}
 }
 
@@ -209,13 +226,17 @@ void b2Body::DestroyFixture(b2Fixture* fixture)
 	// Remove the fixture from this body's singly linked list.
 	b2Assert(m_fixtureCount > 0);
 	b2Fixture** node = &m_fixtureList;
+#if DEBUG
 	bool found = false;
+#endif // DEBUG
 	while (*node != NULL)
 	{
 		if (*node == fixture)
 		{
 			*node = fixture->m_next;
+#if DEBUG
 			found = true;
+#endif // DEBUG
 			break;
 		}
 
@@ -401,11 +422,6 @@ bool b2Body::ShouldCollide(const b2Body* other) const
 
 void b2Body::SetTransform(const b2Vec2& position, float32 angle)
 {
-	this->SetTransform(position, angle, true);
-}
-
-void b2Body::SetTransform(const b2Vec2& position, float32 angle, bool updateContacts)
-{
 	b2Assert(m_world->IsLocked() == false);
 	if (m_world->IsLocked() == true)
 	{
@@ -414,6 +430,7 @@ void b2Body::SetTransform(const b2Vec2& position, float32 angle, bool updateCont
 
 	m_xf.q.Set(angle);
 	m_xf.p = position;
+	m_xf0 = m_xf;
 
 	m_sweep.c = b2Mul(m_xf, m_sweep.localCenter);
 	m_sweep.a = angle;
@@ -426,9 +443,6 @@ void b2Body::SetTransform(const b2Vec2& position, float32 angle, bool updateCont
 	{
 		f->Synchronize(broadPhase, m_xf, m_xf);
 	}
-
-	if (updateContacts)
-		m_world->m_contactManager.FindNewContacts();
 }
 
 void b2Body::SynchronizeFixtures()
@@ -487,6 +501,28 @@ void b2Body::SetActive(bool flag)
 		}
 		m_contactList = NULL;
 	}
+}
+
+void b2Body::SetFixedRotation(bool flag)
+{
+	bool status = (m_flags & e_fixedRotationFlag) == e_fixedRotationFlag;
+	if (status == flag)
+	{
+		return;
+	}
+
+	if (flag)
+	{
+		m_flags |= e_fixedRotationFlag;
+	}
+	else
+	{
+		m_flags &= ~e_fixedRotationFlag;
+	}
+
+	m_angularVelocity = 0.0f;
+
+	ResetMassData();
 }
 
 void b2Body::Dump()

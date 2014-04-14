@@ -16,9 +16,9 @@
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "Box2D/Dynamics/Joints/b2MouseJoint.h"
-#include "Box2D/Dynamics/b2Body.h"
-#include "Box2D/Dynamics/b2TimeStep.h"
+#include <Box2D/Dynamics/Joints/b2MouseJoint.h>
+#include <Box2D/Dynamics/b2Body.h>
+#include <Box2D/Dynamics/b2TimeStep.h>
 
 // p = attached point, m = mouse point
 // C = p - m
@@ -214,4 +214,9 @@ b2Vec2 b2MouseJoint::GetReactionForce(float32 inv_dt) const
 float32 b2MouseJoint::GetReactionTorque(float32 inv_dt) const
 {
 	return inv_dt * 0.0f;
+}
+
+void b2MouseJoint::ShiftOrigin(const b2Vec2& newOrigin)
+{
+	m_targetA -= newOrigin;
 }

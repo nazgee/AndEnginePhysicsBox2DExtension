@@ -1,5 +1,6 @@
 /*
 * Copyright (c) 2006-2009 Erin Catto http://www.box2d.org
+* Copyright (c) 2014 Google, Inc.
 *
 * This software is provided 'as-is', without any express or implied
 * warranty.  In no event will the authors be held liable for any damages
@@ -16,11 +17,11 @@
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "Box2D/Dynamics/b2ContactManager.h"
-#include "Box2D/Dynamics/b2Body.h"
-#include "Box2D/Dynamics/b2Fixture.h"
-#include "Box2D/Dynamics/b2WorldCallbacks.h"
-#include "Box2D/Dynamics/Contacts/b2Contact.h"
+#include <Box2D/Dynamics/b2ContactManager.h>
+#include <Box2D/Dynamics/b2Body.h>
+#include <Box2D/Dynamics/b2Fixture.h>
+#include <Box2D/Dynamics/b2WorldCallbacks.h>
+#include <Box2D/Dynamics/Contacts/b2Contact.h>
 
 b2ContactFilter b2_defaultFilter;
 b2ContactListener b2_defaultListener;
@@ -245,8 +246,6 @@ void b2ContactManager::AddPair(void* proxyUserDataA, void* proxyUserDataB)
 	// Contact creation may swap fixtures.
 	fixtureA = c->GetFixtureA();
 	fixtureB = c->GetFixtureB();
-	indexA = c->GetChildIndexA();
-	indexB = c->GetChildIndexB();
 	bodyA = fixtureA->GetBody();
 	bodyB = fixtureB->GetBody();
 
@@ -286,8 +285,11 @@ void b2ContactManager::AddPair(void* proxyUserDataA, void* proxyUserDataB)
 	bodyB->m_contactList = &c->m_nodeB;
 
 	// Wake up the bodies
-	bodyA->SetAwake(true);
-	bodyB->SetAwake(true);
+	if (fixtureA->IsSensor() == false && fixtureB->IsSensor() == false)
+	{
+		bodyA->SetAwake(true);
+		bodyB->SetAwake(true);
+	}
 
 	++m_contactCount;
 }

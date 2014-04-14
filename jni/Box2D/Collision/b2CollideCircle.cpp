@@ -16,9 +16,9 @@
 * 3. This notice may not be removed or altered from any source distribution.
 */
 
-#include "Box2D/Collision/b2Collision.h"
-#include "Box2D/Collision/Shapes/b2CircleShape.h"
-#include "Box2D/Collision/Shapes/b2PolygonShape.h"
+#include <Box2D/Collision/b2Collision.h>
+#include <Box2D/Collision/Shapes/b2CircleShape.h>
+#include <Box2D/Collision/Shapes/b2PolygonShape.h>
 
 void b2CollideCircles(
 	b2Manifold* manifold,
@@ -63,7 +63,7 @@ void b2CollidePolygonAndCircle(
 	int32 normalIndex = 0;
 	float32 separation = -b2_maxFloat;
 	float32 radius = polygonA->m_radius + circleB->m_radius;
-	int32 vertexCount = polygonA->m_vertexCount;
+	int32 vertexCount = polygonA->m_count;
 	const b2Vec2* vertices = polygonA->m_vertices;
 	const b2Vec2* normals = polygonA->m_normals;
 
