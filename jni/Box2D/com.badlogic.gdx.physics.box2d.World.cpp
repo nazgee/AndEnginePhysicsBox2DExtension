@@ -5,7 +5,7 @@
 #include <Box2D/Box2D.h>
 
 static jclass worldClass = 0;
-static jmethodID shouldCollideID = 0;
+static jmethodID shouldCollideFixtureFixtureID = 0;
 static jmethodID shouldCollideFixtureParticleID = 0;
 static jmethodID shouldCollideParticleParticleID = 0;
 static jmethodID beginContactID = 0;
@@ -15,22 +15,34 @@ static jmethodID postSolveID = 0;
 static jmethodID reportFixtureID = 0;
 static jmethodID reportRayFixtureID = 0;
 
-class CustomRayCastCallback: public b2RayCastCallback
-{
-private:
+class JNIHolder {
+public:
 	JNIEnv* env;
 	jobject obj;
 
+	JNIHolder(JNIEnv* env, jobject object) {
+		this->env = env;
+		this->obj = env->NewGlobalRef(object);
+	}
+	~JNIHolder() {
+		env->DeleteGlobalRef(obj);
+	}
+};
+
+class CustomRayCastCallback: public b2RayCastCallback
+{
+	JNIHolder jni;
+
 public:
 	CustomRayCastCallback( JNIEnv *env, jobject obj )
+	: jni(env, obj)
 	{
-		this->env = env;
-		this->obj = obj;
+
 	}
 
 	virtual float32 ReportFixture( b2Fixture* fixture, const b2Vec2& point, const b2Vec2& normal, float32 fraction)
 	{
-		return env->CallFloatMethod(obj, reportRayFixtureID, (jlong)fixture, (jfloat)point.x, (jfloat)point.y,
+		return jni.env->CallFloatMethod(jni.obj, reportRayFixtureID, (jlong)fixture, (jfloat)point.x, (jfloat)point.y,
 																(jfloat)normal.x, (jfloat)normal.y, (jfloat)fraction );
 	}
 };
@@ -38,99 +50,90 @@ public:
 class CustomContactFilter: public b2ContactFilter
 {
 private:
-	JNIEnv* env;
-	jobject obj;
+	JNIHolder jni;
 
 public:
 	CustomContactFilter( JNIEnv* env, jobject obj )
+	: jni(env, obj)
 	{
-		this->env = env;
-		this->obj = obj;
 	}
 
 	virtual bool ShouldCollide(b2Fixture* fixtureA, b2Fixture* fixtureB)
 	{
-		if( shouldCollideID != 0 )
-			return env->CallBooleanMethod( obj, shouldCollideID, (jlong)fixtureA, (jlong)fixtureB );
-		else
-			return true;
+		if( shouldCollideFixtureFixtureID != 0 )
+			return jni.env->CallBooleanMethod( jni.obj, shouldCollideFixtureFixtureID, (jlong)fixtureA, (jlong)fixtureB );
+		return false;
 	}
 
 	virtual bool ShouldCollide(b2Fixture* fixture, b2ParticleSystem* particleSystem, int32 particleIndex)
 	{
 		if( shouldCollideFixtureParticleID != 0 )
-			return env->CallBooleanMethod( obj, shouldCollideFixtureParticleID, (jlong)fixture, (jlong)particleSystem, (jint) particleIndex);
-		else
-			return true;
+			return jni.env->CallBooleanMethod( jni.obj, shouldCollideFixtureParticleID, (jlong)fixture, (jlong)particleSystem, (jint) particleIndex);
+		return false;
 	}
 
 	virtual bool ShouldCollide(b2ParticleSystem* particleSystem, int32 particleIndexA, int32 particleIndexB)
 	{
 		if( shouldCollideParticleParticleID != 0 )
-			return env->CallBooleanMethod( obj, shouldCollideParticleParticleID, (jlong)particleSystem, (jint)particleIndexA, (jint) particleIndexB );
-		else
-			return true;
+			return jni.env->CallBooleanMethod( jni.obj, shouldCollideParticleParticleID, (jlong)particleSystem, (jint)particleIndexA, (jint) particleIndexB );
+		return false;
 	}
 };
 
 class CustomContactListener: public b2ContactListener
 {
 private:
-	JNIEnv* env;
-	jobject obj;
+	JNIHolder jni;
 
 public:
-		CustomContactListener( JNIEnv* env, jobject obj )
+		CustomContactListener( JNIEnv* env, jobject obj)
+		: jni(env, obj)
 		{
-			this->env = env;
-			this->obj = obj;
 		}
 
 		/// Called when two fixtures begin to touch.
 		virtual void BeginContact(b2Contact* contact)
 		{
 			if( beginContactID != 0 )
-				env->CallVoidMethod(obj, beginContactID, (jlong)contact );
+				jni.env->CallVoidMethod(jni.obj, beginContactID, (jlong)contact );
 		}
 
 		/// Called when two fixtures cease to touch.
 		virtual void EndContact(b2Contact* contact)
 		{
 			if( endContactID != 0 )
-				env->CallVoidMethod(obj, endContactID, (jlong)contact);
+				jni.env->CallVoidMethod(jni.obj, endContactID, (jlong)contact);
 		}
-		
+
 		/// This is called after a contact is updated.
 		virtual void PreSolve(b2Contact* contact, const b2Manifold* oldManifold)
 		{
 			if( preSolveID != 0 )
-				env->CallVoidMethod(obj, preSolveID, (jlong)contact, (jlong)oldManifold);
+				jni.env->CallVoidMethod(jni.obj, preSolveID, (jlong)contact, (jlong)oldManifold);
 		}
 	
 		/// This lets you inspect a contact after the solver is finished.
 		virtual void PostSolve(b2Contact* contact, const b2ContactImpulse* impulse)
 		{
 			if( postSolveID != 0 )
-				env->CallVoidMethod(obj, postSolveID, (jlong)contact, (jlong)impulse);
+				jni.env->CallVoidMethod(jni.obj, postSolveID, (jlong)contact, (jlong)impulse);
 		}
 };
 
 class CustomQueryCallback: public b2QueryCallback
 {
 private:
-	JNIEnv* env;
-	jobject obj;
+	JNIHolder jni;
 
 public:
 	CustomQueryCallback( JNIEnv* env, jobject obj )
+	: jni(env, obj)
 	{
-		this->env = env;
-		this->obj = obj;
 	}
 
 	virtual bool ReportFixture( b2Fixture* fixture )
 	{
-		return env->CallBooleanMethod(obj, reportFixtureID, (jlong)fixture );
+		return jni.env->CallBooleanMethod(jni.obj, reportFixtureID, (jlong)fixture );
 	}
 }; 
 
@@ -146,8 +149,7 @@ inline b2BodyType getBodyType( int type )
 	}
 }
 
-b2ContactFilter defaultFilter;
-	 JNIEXPORT jlong JNICALL Java_com_badlogic_gdx_physics_box2d_World_newWorld(JNIEnv* env, jobject object, jfloat gravityX, jfloat gravityY, jboolean doSleep) {
+JNIEXPORT jlong JNICALL Java_com_badlogic_gdx_physics_box2d_World_newWorld(JNIEnv* env, jobject object, jfloat gravityX, jfloat gravityY, jboolean doSleep) {
 
 
 //@line:230
@@ -161,7 +163,7 @@ b2ContactFilter defaultFilter;
 			postSolveID = env->GetMethodID( worldClass, "postSolve", "(JJ)V" );
 			reportFixtureID = env->GetMethodID(worldClass, "reportFixture", "(J)Z" );
 			reportRayFixtureID = env->GetMethodID(worldClass, "reportRayFixture", "(JFFFFF)F" );
-			shouldCollideID = env->GetMethodID( worldClass, "contactFilter", "(JJ)Z");
+			shouldCollideFixtureFixtureID = env->GetMethodID( worldClass, "contactFilter", "(JJ)Z");
 			shouldCollideFixtureParticleID = env->GetMethodID( worldClass, "contactFilter", "(JJI)Z");
 			shouldCollideParticleParticleID = env->GetMethodID( worldClass, "contactFilter", "(JII)Z");
 		}
@@ -169,19 +171,35 @@ b2ContactFilter defaultFilter;
 		b2World* world = new b2World( b2Vec2( gravityX, gravityY ));
 		world->SetAllowSleeping( doSleep );
 		return (jlong)world;
-	
-
 }
 
-JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_setUseDefaultContactFilter(JNIEnv* env, jobject object, jboolean use) {
+JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_setUseJavaContactListener(JNIEnv* env, jobject object, jlong addr, jboolean use) {
+	b2World* world = (b2World*)addr;
+	CustomContactListener* listener = (CustomContactListener*)world->GetContactManager().m_contactListener;
 
-
-//@line:261
-
-		// FIXME
-	
-
+	if (!use) {
+		delete listener;
+	} else if (!listener) {
+		world->SetContactListener(new CustomContactListener(env, object));
+	}
 }
+
+JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_setUseJavaContactFilter(JNIEnv* env, jobject object, jlong addr, jboolean use) {
+	b2World* world = (b2World*)addr;
+	CustomContactFilter* filter = (CustomContactFilter*)world->GetContactManager().m_contactFilter;
+
+	if (!use) {
+		delete filter;
+	} else if (!filter) {
+		world->SetContactFilter(new CustomContactFilter(env, object));
+	}
+}
+
+JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_setInvisibleToParticlesFixtureMask(JNIEnv* env, jobject object, jlong addr, jshort mask) {
+	b2World* world = (b2World*)addr;
+	CustomContactFilter* filter = (CustomContactFilter*)world->GetContactManager().m_contactFilter;
+}
+
 
 JNIEXPORT jlong JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniCreateBody(JNIEnv* env, jobject object, jlong addr, jint type, jfloat positionX, jfloat positionY, jfloat angle, jfloat linearVelocityX, jfloat linearVelocityY, jfloat angularVelocity, jfloat linearDamping, jfloat angularDamping, jboolean allowSleep, jboolean awake, jboolean fixedRotation, jboolean bullet, jboolean active, jfloat inertiaScale) {
 
@@ -217,15 +235,7 @@ JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniDestroyBody(
 
 		b2World* world = (b2World*)addr;
 		b2Body* body = (b2Body*)bodyAddr;
-		CustomContactFilter contactFilter(env, object);
-		CustomContactListener contactListener(env,object);
-		world->SetContactFilter(&contactFilter);
-		world->SetContactListener(&contactListener);
 		world->DestroyBody(body);
-		world->SetContactFilter(&defaultFilter);
-		world->SetContactListener(0);
-	
-
 }
 
 JNIEXPORT jlong JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniCreateWheelJoint(JNIEnv* env, jobject object, jlong addr, jlong bodyA, jlong bodyB, jboolean collideConnected, jfloat localAnchorAX, jfloat localAnchorAY, jfloat localAnchorBX, jfloat localAnchorBY, jfloat localAxisAX, jfloat localAxisAY, jboolean enableMotor, jfloat maxMotorTorque, jfloat motorSpeed, jfloat frequencyHz, jfloat dampingRatio) {
@@ -248,8 +258,6 @@ JNIEXPORT jlong JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniCreateWheel
 		def.dampingRatio = dampingRatio;
 		
 		return (jlong)world->CreateJoint(&def);
-	
-
 }
 
 JNIEXPORT jlong JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniCreateRopeJoint(JNIEnv* env, jobject object, jlong addr, jlong bodyA, jlong bodyB, jboolean collideConnected, jfloat localAnchorAX, jfloat localAnchorAY, jfloat localAnchorBX, jfloat localAnchorBY, jfloat maxLength) {
@@ -446,31 +454,16 @@ JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniDestroyJoint
 
 		b2World* world = (b2World*)addr;
 		b2Joint* joint = (b2Joint*)jointAddr;
-		CustomContactFilter contactFilter(env, object);
-		CustomContactListener contactListener(env,object);
-		world->SetContactFilter(&contactFilter);
-		world->SetContactListener(&contactListener);
 		world->DestroyJoint( joint );
-		world->SetContactFilter(&defaultFilter);
-		world->SetContactListener(0);
-	
 
 }
 
 JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniStep(JNIEnv* env, jobject object, jlong addr, jfloat timeStep, jint velocityIterations, jint positionIterations) {
 
-
 //@line:619
 
 		b2World* world = (b2World*)addr;
-		CustomContactFilter contactFilter(env, object);
-		CustomContactListener contactListener(env,object);
-		world->SetContactFilter(&contactFilter);
-		world->SetContactListener(&contactListener);
 		world->Step( timeStep, velocityIterations, positionIterations );
-		world->SetContactFilter(&defaultFilter);
-		world->SetContactListener(0);
-	
 
 }
 
@@ -652,9 +645,14 @@ JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniDispose(JNIE
 //@line:867
 
 		b2World* world = (b2World*)(addr);
-		delete world;
-	
+		CustomContactFilter* filter = (CustomContactFilter*)world->GetContactManager().m_contactFilter;
+		CustomContactListener* listener = (CustomContactListener*)world->GetContactManager().m_contactListener;
+		world->SetContactFilter(0);
+		world->SetContactListener(0);
 
+		delete listener;
+		delete filter;
+		delete world;
 }
 
 JNIEXPORT void JNICALL Java_com_badlogic_gdx_physics_box2d_World_jniRayCast(JNIEnv* env, jobject object, jlong addr, jfloat aX, jfloat aY, jfloat bX, jfloat bY) {

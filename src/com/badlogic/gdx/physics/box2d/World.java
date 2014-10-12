@@ -244,17 +244,27 @@ b2ContactFilter defaultFilter;
 	 * (b2_defaultFilter). The listener is owned by you and must remain in scope. */
 	public void setContactFilter (ContactFilter filter) {
 		this.contactFilter = filter;
-		setUseDefaultContactFilter(filter == null);
+		setUseJavaContactFilter(addr, filter != null);
 	}
 	
+	private native void setUseJavaContactListener(long addr, boolean use); /*
 	/** tells the native code not to call the Java world class if use is false **/
-	private native void setUseDefaultContactFilter(boolean use); /*
-		// FIXME
+	private native void setUseJavaContactFilter(long addr, boolean use); /*
+		b2World* world = (b2World*)addr;
+		CustomContactFilter* filter = world->GetContactManager().m_contactFilter;
+		filter->setCustomized(use);
 	*/
+
+	public void setInvisibleToParticlesFixtureMask(short nonreactiveFixtures) {
+		setInvisibleToParticlesFixtureMask(addr, nonreactiveFixtures);
+	}
+	/** tells the native code to do quick filtering of particles and fixtures **/
+	private native void setInvisibleToParticlesFixtureMask(long addr, short mask); /*
 
 	/** Register a contact event listener. The listener is owned by you and must remain in scope. */
 	public void setContactListener (ContactListener listener) {
 		this.contactListener = listener;
+		setUseJavaContactListener(addr, listener != null);
 	}
 
 	/** Create a rigid body given a definition. No reference to the definition is retained.
