@@ -21,6 +21,8 @@ import java.util.Iterator;
 
 import org.andengine.util.adt.pool.Pool;
 
+import android.util.Log;
+
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.JointDef.JointType;
 import com.badlogic.gdx.physics.box2d.joints.DistanceJoint;
@@ -43,6 +45,7 @@ import com.badlogic.gdx.physics.box2d.joints.WeldJoint;
 import com.badlogic.gdx.physics.box2d.joints.WeldJointDef;
 import com.badlogic.gdx.physics.box2d.joints.WheelJoint;
 import com.badlogic.gdx.physics.box2d.joints.WheelJointDef;
+import com.badlogic.gdx.physics.box2d.liquidfun.ParticleSystem;
 import com.badlogic.gdx.utils.LongMap;
 
 /** The world class manages all physics entities, dynamic simulation, and asynchronous queries. The world also contains efficient
@@ -191,6 +194,9 @@ b2ContactFilter defaultFilter;
 
 	/** all known joints **/
 	protected final LongMap<Joint> joints = new LongMap<Joint>(100);
+
+	/** all known particle systems **/
+	public final LongMap<ParticleSystem> particleSystems = new LongMap<ParticleSystem>(100);
 
 	/** Contact filter **/
 	protected ContactFilter contactFilter = null;
@@ -882,6 +888,22 @@ b2ContactFilter defaultFilter;
 
 			boolean collide = (filterA.maskBits & filterB.categoryBits) != 0 && (filterA.categoryBits & filterB.maskBits) != 0;
 			return collide;
+		}
+	}
+
+	boolean contactFilter(long fixture, long particleSystem, int particleIndex) {
+		if (contactFilter != null)
+			return contactFilter.shouldCollide(fixtures.get(fixture), particleSystems.get(particleSystem), particleIndex);
+		else {
+			return true;
+		}
+	}
+
+	boolean contactFilter(long particleSystem, int particleIndexA, int particleIndexB) {
+		if (contactFilter != null)
+			return contactFilter.shouldCollide(particleSystems.get(particleSystem), particleIndexA, particleIndexB);
+		else {
+			return true;
 		}
 	}
 

@@ -40,6 +40,8 @@ public class ParticleSystem {
 			pDef.powderStrength, pDef.ejectionStrength, pDef.staticPressureStrength, 
 			pDef.staticPressureRelaxation, pDef.staticPressureIterations, pDef.colorMixingStrength, pDef.destroyByAge,
 			pDef.lifetimeGranularity);
+
+		mWorld.particleSystems.put(addr, this);
 	}
 	
 	private native long jniCreateParticleSystem(long worldAddr, float radius, float pressureStrength, 
@@ -72,6 +74,7 @@ public class ParticleSystem {
 	*/
 	
 	public void destroyParticleSystem() {
+		mWorld.particleSystems.remove(addr);
 		jniDestroyParticleSystem(mWorld.getAddress(), addr);
 	}
 	

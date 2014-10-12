@@ -6,6 +6,8 @@
 
 static jclass worldClass = 0;
 static jmethodID shouldCollideID = 0;
+static jmethodID shouldCollideFixtureParticleID = 0;
+static jmethodID shouldCollideParticleParticleID = 0;
 static jmethodID beginContactID = 0;
 static jmethodID endContactID = 0;
 static jmethodID preSolveID = 0;
@@ -50,6 +52,22 @@ public:
 	{
 		if( shouldCollideID != 0 )
 			return env->CallBooleanMethod( obj, shouldCollideID, (jlong)fixtureA, (jlong)fixtureB );
+		else
+			return true;
+	}
+
+	virtual bool ShouldCollide(b2Fixture* fixture, b2ParticleSystem* particleSystem, int32 particleIndex)
+	{
+		if( shouldCollideFixtureParticleID != 0 )
+			return env->CallBooleanMethod( obj, shouldCollideFixtureParticleID, (jlong)fixture, (jlong)particleSystem, (jint) particleIndex);
+		else
+			return true;
+	}
+
+	virtual bool ShouldCollide(b2ParticleSystem* particleSystem, int32 particleIndexA, int32 particleIndexB)
+	{
+		if( shouldCollideParticleParticleID != 0 )
+			return env->CallBooleanMethod( obj, shouldCollideParticleParticleID, (jlong)particleSystem, (jint)particleIndexA, (jint) particleIndexB );
 		else
 			return true;
 	}
@@ -144,6 +162,8 @@ b2ContactFilter defaultFilter;
 			reportFixtureID = env->GetMethodID(worldClass, "reportFixture", "(J)Z" );
 			reportRayFixtureID = env->GetMethodID(worldClass, "reportRayFixture", "(JFFFFF)F" );
 			shouldCollideID = env->GetMethodID( worldClass, "contactFilter", "(JJ)Z");
+			shouldCollideFixtureParticleID = env->GetMethodID( worldClass, "contactFilter", "(JJI)Z");
+			shouldCollideParticleParticleID = env->GetMethodID( worldClass, "contactFilter", "(JII)Z");
 		}
 	
 		b2World* world = new b2World( b2Vec2( gravityX, gravityY ));
