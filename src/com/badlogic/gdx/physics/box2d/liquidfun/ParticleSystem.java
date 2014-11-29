@@ -41,6 +41,7 @@ public class ParticleSystem {
 			pDef.staticPressureRelaxation, pDef.staticPressureIterations, pDef.colorMixingStrength, pDef.destroyByAge,
 			pDef.lifetimeGranularity);
 
+		setParticleDensity(pDef.density);
 		mWorld.particleSystems.put(addr, this);
 	}
 	

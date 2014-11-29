@@ -3,6 +3,9 @@ package com.badlogic.gdx.physics.box2d.liquidfun;
 public class ParticleSystemDef {
 
 	/** Particles behave as circles with this radius. In Box2D units. */
+	public float density = 1.0f;
+
+	/** Particles behave as circles with this radius. In Box2D units. */
 	public float radius = 1.0f;
 
 	/** Increases pressure in response to compression
