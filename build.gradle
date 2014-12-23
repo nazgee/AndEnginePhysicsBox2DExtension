@@ -1,0 +1,31 @@
+apply plugin: 'com.android.library'
+
+android {
+    compileSdkVersion 15
+    buildToolsVersion "21.1.2"
+
+    defaultConfig {
+        minSdkVersion 8
+        targetSdkVersion 8
+
+        ndk {
+            moduleName "andenginephysicsbox2dextension"
+//            LOCAL_CFLAGS := -DFIXED_POINT -ffast-math -O3 -Wall -I$(LOCAL_PATH) -D_ARM_ASSEM_ -DANDROID
+//            LOCAL_CPPFLAGS := -DFIXED_POINT -I$LOCAL_PATH/libvorbis/ -D_ARM_ASSEM_
+//            LOCAL_LDLIBS := -llog
+            ldLibs "log"
+            cFlags "-DFIXED_POINT -ffast-math -O3 -Wall -D_ARM_ASSEM_ -DANDROID -DFIXED_POINT -D_ARM_ASSEM_"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+}
+
+dependencies {
+    compile project(':andEngine')
+}
